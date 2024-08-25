@@ -3,16 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\Job;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 class JobController extends Controller
 {
     public function index()
     {
-        $jobs = Job::with('employer')->latest()->cursorPaginate(3);
-        return view('jobs.index', [
-            'jobs' => $jobs]);
+        $jobs = Job::with('employer')->latest()->simplePaginate(3);
 
+        return view('jobs.index', [
+            'jobs' => $jobs,
+        ]);
     }
 
     public function create()
@@ -22,8 +23,7 @@ class JobController extends Controller
 
     public function show(Job $job)
     {
-        return view('jobs.show', [
-            'job' => $job]);
+        return view('jobs.show', ['job' => $job]);
     }
 
     public function store()
@@ -40,29 +40,17 @@ class JobController extends Controller
         ]);
 
         return redirect('/jobs');
-
     }
 
     public function edit(Job $job)
     {
-        if (Auth::guest()) {
-            return redirect('/login');
-        }
-
-        if ($job->employer->user->isNot(Auth::user())) {
-            abort(403);
-        }
-
-        return view('jobs.edit', [
-            'job' => $job]);
-
+        return view('jobs.edit', ['job' => $job]);
     }
 
     public function update(Job $job)
     {
-        //authorize
+        Gate::authorize('edit-job', $job);
 
-        //validate
         request()->validate([
             'title' => ['required', 'min:3'],
             'salary' => ['required'],
@@ -73,20 +61,15 @@ class JobController extends Controller
             'salary' => request('salary'),
         ]);
 
-        //redirect to the job page
         return redirect('/jobs/' . $job->id);
-
     }
 
     public function destroy(Job $job)
     {
-        //authorize the user
+        Gate::authorize('edit-job', $job);
 
-        // delete the job
         $job->delete();
 
-        // redirect to the jobs page
         return redirect('/jobs');
-
     }
 }
